@@ -1,40 +1,70 @@
 """ Generates ayasdi_assignment.csv and ayasdi_assignment.db """
 import random
 import math
-# import csv
-# import sqlite3
-# from sqlite3 import Error
+import datetime
+import csv
+import sqlite3
+from sqlite3 import Error
+
+def generate_header(start, end, attachment):
+    """
+        header generator
+    """
+
+    result = []
+
+    for i in range(start, end + 1):
+        result.append("col" + str(i) + str(attachment))
+
+    return result
 
 
-def generate_column(label, values, previous_table):
-    """Generate a column with given label and values"""
+def generate_column(values, previous_table):
+    """Generate a column with given values"""
 
-    if not previous_table:
-        result = []
-        result.append([label])
-        for i in range(0, len(values)):
-            result.append([values[i]])
-    else:
-        result = previous_table
-        for i in range(0, len(previous_table)):
-            current_item = previous_table[i]
-            for j in range(0, len(values)):
-                current_item.append(values[j])
+    result = []
+
+    for i in range(0, len(previous_table)):
+        current_item = previous_table[i] + values[i]
+        result.append(current_item)
+
     return result
 
 
 # Generating CSV file
-def generate_1st_column():
+def generate_1st_column(rows):
     """
         labeled as col1
         the index column where the values are 1 to 1 million
+        (1 million rows with 1 header)
     """
 
-    result = generate_column('col1', [1, 2, 3], None)
-    return "1st column generated: ", result
+    values = [i for i in range(1, rows+1)]
+    result = []
+    result.append(['col1'])
+
+    for i in range(0, len(values)):
+        result.append([values[i]])
+
+    return result
 
 
-def generate_2nd_10th_column():
+def get_random_num_10per_null(max_number, percentage):
+    """
+        add 10% up of the number existing
+        if the number is over index, generate null
+    """
+
+    tenup = int(math.floor(max_number * (1 + percentage)))
+    random_location = random.randint(0, tenup)
+
+    if random_location > max_number:
+        return None
+    else:
+        return random_location
+
+
+def generate_2nd_10th_column(rows):
     """
         The next 9 columns (2 to 10) contain randomly distributed gaussian data
         and are labelled col2_x ... col10_x where 'x' is the mean of the gaussian distribution.
@@ -43,22 +73,9 @@ def generate_2nd_10th_column():
         You can choose whatever mean and variance you would like for each column.
     """
 
-    return "2nd - 10th column generated"
+    result = [generate_header(2, 10, "")]
 
-
-def get_random_num_10per_null(max_number):
-    """
-        add 10% up of the number existing
-        if the number is over index, generate null
-    """
-
-    tenup = int(math.floor(max_number * 1.1))
-    random_location = random.randint(0, tenup)
-
-    if random_location > max_number:
-        return None
-    else:
-        return random_location
+    return result
 
 
 def get_random_word_10per_null():
@@ -69,37 +86,59 @@ def get_random_word_10per_null():
     # word_dic = open('wordlist.txt', 'w')
     word_dic = file('wordlist.txt').read().split()
     word_dic_length = len(word_dic)
-    random_word_location = get_random_num_10per_null(word_dic_length)
+    random_word_location = get_random_num_10per_null(word_dic_length, 0.1)
     if random_word_location:
         return word_dic[random_word_location]
     else:
         return None
 
 
+def append_data(start_col, end_col, rows, func_for_content):
+    """
+        append given data for the fows and columns given
+    """
+
+    result = [generate_header(start_col, end_col, "")]
+
+    while(len(result) < rows + 1):
+        item = []
+        while(len(item) < end_col - start_col + 1):
+            to_append = func_for_content()
+            item.append(to_append)
+        result.append(item)
+    
+    return result
+
+
 # English word list downloaded from the following link
 # http://www-01.sil.org/linguistics/wordlists/english/
-def generate_11th_19th_column():
+def generate_11th_19th_column(rows):
     """
         Columns 11 to 19 are labelled as col11...col19,
         where each column has random strings selected from the English Dictionary.
         10% randomly distributed nulls in this column as well.
     """
 
-    word = get_random_word_10per_null()
-
-    if word:
-        return "11th - 19th column generated with:", word
-    else:
-        return "11th - 19th column generated with: ", "You got None"
+    start_col = 11
+    end_col = 19
+    return append_data(start_col, end_col, rows, get_random_word_10per_null)
 
 
-def generate_20th_column():
+def get_random_date():
+    start_date = "01/01/2014"
+    date_1 = datetime.datetime.strptime(start_date, "%m/%d/%Y")
+    random_number = get_random_num_10per_null(365, 0)
+    return str((date_1 + datetime.timedelta(days=random_number)).strftime("%B %d, %Y"))
+
+
+def generate_20th_column(rows):
     """
         Column 20 has random dates selected between January 1, 2014 to December 31, 2014.
         No nulls in this column.
     """
 
-    return "20th column generated"
+    # 0 - 364 (range to 365) are the random numbers to generate
+    return append_data(20, 20, rows, get_random_date)
 
 
 def run_all():
@@ -107,46 +146,54 @@ def run_all():
     run all functions that generates the table
     """
 
-    first = generate_1st_column()
-    second_10th = generate_2nd_10th_column()
-    eleventh_19th = generate_11th_19th_column()
-    twentiesth = generate_20th_column()
+    rows = 2;
+    result = generate_1st_column(rows)
+    # second_10th = generate_2nd_10th_column(rows)
+    # result = generate_column(second_10th, result)
+    eleventh_19th = generate_11th_19th_column(rows)
+    result = generate_column(eleventh_19th, result)
+    twentiesth = generate_20th_column(rows)
+    result = generate_column(twentiesth, result)
+    
 
-    print first, "\n", second_10th, "\n", eleventh_19th, "\n", twentiesth
-
-run_all()
+    return result
 
 
-# ########################### generate csv
-# def generate_csv_table(table_values):
-#     """generate csv table with given array"""
+table_values = run_all()
 
-#     with open('ayasdi_assignment.csv', 'wb') as csvfile:
-#         filewriter = csv.writer(csvfile,
-#             delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-#         # write the rest of the column values
-#         for i in range(0, len(table_values)):
-#             filewriter.writerow([table_values[i]])
+########################### generate csv
+def generate_csv_table(table_values):
+    """generate csv table with given array"""
+
+    with open('ayasdi_assignment.csv', 'wb') as csvfile:
+        filewriter = csv.writer(csvfile, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
+        # write the rest of the column values
+        for i in range(0, len(table_values)):
+            filewriter.writerow([table_values[i]])
+
+
+generate_csv_table(table_values)
 
 
 # ########################### Loading the CSV table to sqlite
-# def create_connection(db_file):
-#     """
-#         create a database connection to the SQLite database
-#         specified by the db_file
-#         :param db_file: database file
-#         :return: Connection object or None
-#     """
+def create_connection(db_file):
+    """
+        create a database connection to the SQLite database
+        specified by the db_file
+        :param db_file: database file
+        :return: Connection object or None
+    """
 
-#     try:
-#         # con = sqlite3.connect(":memory:")
-#         conn = sqlite3.connect(db_file)
-#         return conn
-#     except Error as error:
-#         print error
+    try:
+        # con = sqlite3.connect(":memory:")
+        conn = sqlite3.connect(db_file)
+        return conn
+    except Error as error:
+        print error
 
-#     return None
+    return None
 
 
 # def add_all_lines(conn):
