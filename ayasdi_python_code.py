@@ -64,16 +64,13 @@ def get_random_num_given_per_null(max_number, percentage):
         return random_num
 
 
-def get_gauss_num_10per_null():
+def get_gauss_num_10per_null(input_mean, input_std):
     """
         get a number within normal distribution with 10percent null
     """
 
-    first_mean = 10
-    sd = 1
-
-    if (get_random_num_given_per_null(1, 0.1) != None):
-        gauss_num = random.normalvariate(first_mean, sd)
+    if get_random_num_given_per_null(1, 0.1) != None:
+        gauss_num = random.normalvariate(input_mean, input_std)
     else:
         gauss_num = None
 
@@ -91,8 +88,27 @@ def generate_2nd_10th_column(rows):
 
     start_col = 2
     end_col = 10
+    range_for_col = end_col - start_col
+    result = []
 
-    return append_data(start_col, end_col, rows, get_gauss_num_10per_null)
+    for i in range(1, range_for_col + 1):
+        input_mean = i * 10
+        std = 1
+        column_to_attach = [["col" + str(i) + "_" + str(input_mean)]]
+
+        # paste a column to the previous column
+        while len(column_to_attach) < rows + 1:
+            item = []
+            to_append = get_gauss_num_10per_null(input_mean, std)
+            item.append(to_append)
+            column_to_attach.append(item)
+
+        if result:
+            result = generate_column(column_to_attach, result)
+        else:
+            result = column_to_attach
+
+    return result
 
 
 def get_random_word_10per_null():
@@ -188,12 +204,8 @@ def generate_csv_table(table_values):
     """generate csv table with given array"""
 
     with open('ayasdi_assignment.csv', 'wb') as csvfile:
-        filewriter = csv.writer(csvfile, delimiter='\t')
-        # , quotechar='|', quoting=csv.QUOTE_MINIMAL)
-
-        # write the rest of the column values
-        for i in range(0, len(table_values)):
-            filewriter.writerow([table_values[i]])
+        filewriter = csv.writer(csvfile, delimiter=',')
+        filewriter.writerows(table_values)
 
 
 generate_csv_table(table_values)
