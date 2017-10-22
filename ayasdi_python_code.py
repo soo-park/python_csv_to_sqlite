@@ -60,8 +60,8 @@ def get_random_num_given_per_null(max_number, percentage):
 
     if random_num > max_number:
         return None
-    else:
-        return random_num
+
+    return random_num
 
 
 def get_gauss_num_10per_null(input_mean, input_std):
@@ -99,7 +99,7 @@ def generate_2nd_10th_column(rows):
         # paste a column to the previous column
         while len(column_to_attach) < rows + 1:
             item = []
-            to_append = get_gauss_num_10per_null(input_mean, std)
+            to_append = "{0:.2f}".format(get_gauss_num_10per_null(input_mean, std))
             item.append(to_append)
             column_to_attach.append(item)
 
@@ -120,10 +120,11 @@ def get_random_word_10per_null():
     word_dic = file('wordlist.txt').read().split()
     word_dic_length = len(word_dic)
     random_word_location = get_random_num_given_per_null(word_dic_length, 0.1)
+
     if random_word_location:
         return word_dic[random_word_location]
-    else:
-        return None
+
+    return None
 
 
 def append_data(start_col, end_col, rows, func_for_content):
@@ -183,7 +184,7 @@ def run_all():
     run all functions that generates the table
     """
 
-    rows = 2
+    rows = 100
     result = generate_1st_column(rows)
     second_10th = generate_2nd_10th_column(rows)
     result = generate_column(second_10th, result)
@@ -196,9 +197,6 @@ def run_all():
     return result
 
 
-table_values = run_all()
-
-
 ########################### generate csv
 def generate_csv_table(table_values):
     """generate csv table with given array"""
@@ -206,9 +204,6 @@ def generate_csv_table(table_values):
     with open('ayasdi_assignment.csv', 'wb') as csvfile:
         filewriter = csv.writer(csvfile, delimiter=',')
         filewriter.writerows(table_values)
-
-
-generate_csv_table(table_values)
 
 
 # ########################### Loading the CSV table to sqlite
@@ -230,26 +225,36 @@ def create_connection(db_file):
     return None
 
 
-# def add_all_lines(conn):
-#     """
-#         add all lines in CSV to the SQLite database.
-#         Query all rows in the tasks table
-#         :param conn: the Connection object
-#         :return:
-#     """
+def add_all_lines(conn, table_values):
+    """
+        add all lines in CSV to the SQLite database.
+        Query all rows in the tasks table
+        :param conn: the Connection object
+        :return:
+    """
 
-#     cur = conn.cursor()
-#     cur.execute("DROP TABLE IF EXISTS ayasdi_table;")
-#     cur.execute("CREATE TABLE ayasdi_table (col1, col2);")
-#     # use your column names here
+    column_list = table_values[0]
+    column_row = filter(lambda x: x != "'", str(column_list)[1: -1])
+    qmark = "?"
+    col_count = len(column_list)
+    for cols in range(1, col_count):
+        qmark += ", ?"
+        cols = cols
 
-#     with open('ayasdi_assignment.csv', 'rb') as fin:
-#         # `with` statement available in 2.5+
-#         # csv.DictReader uses first line in file for column headings by default
-#         dr = csv.DictReader(fin) # comma is default delimiter
-#         to_db = [(i['col1'], i['col2']) for i in dr]
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS ayasdi_table;")
+    cur.execute("CREATE TABLE ayasdi_table (" + column_row + ");")
 
-#     cur.executemany("INSERT INTO ayasdi_table (col1, col2) VALUES (?, ?);", to_db)
+    with open('ayasdi_assignment.csv', 'rb') as fin:
+        # `with` statement available in 2.5+
+        # csv.DictReader uses first line in file for column headings by default
+        dr_name = csv.DictReader(fin) # comma is default delimiter
+
+        to_db = [(i['col1'], i['col1_10'], i['col2_20'], i['col3_30'], i['col4_40'], i['col5_50'], \
+        i['col6_60'], i['col7_70'], i['col8_80'], i['col11'], i['col12'], i['col13'], i['col14'], \
+        i['col15'], i['col16'], i['col17'], i['col18'], i['col19'], i['col20']) for i in dr_name]
+
+    cur.executemany("INSERT INTO ayasdi_table (" + column_row + ") VALUES (" + qmark + ");", to_db)
 
 
 # def select_all_lines(conn):
@@ -264,26 +269,33 @@ def create_connection(db_file):
 #     rows = cur.fetchall()
 
 #     for row in rows:
-#         print(row)
+#         print row
 
 
-# def main():
-#     """
-#         connect with SQLite
-#     """
+def main():
+    """
+        connect with SQLite
+    """
 
-#     database = "./ayasdi_assignment.db"
-#     # create a database connection
-#     conn = create_connection(database)
-#     with conn:
-#         print "run all columns:"
-#         # select_all_lines(conn)
-#         run_all()
-#         add_all_lines(conn)
-#         conn.commit()
+    table_values = run_all()
+    generate_csv_table(table_values)
 
-#     conn.close()
+    database = "./ayasdi_assignment.db"
+    # create a database connection
+    conn = create_connection(database)
+    with conn:
+        print "run all columns:"
+        # select_all_lines(conn)
+        run_all()
+        print "ran all"
+        add_all_lines(conn, table_values)
+        print "add all lines"
+        conn.commit()
+        print "committed"
+
+    conn.close()
+    print "connection closed"
 
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
