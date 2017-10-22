@@ -49,19 +49,35 @@ def generate_1st_column(rows):
     return result
 
 
-def get_random_num_10per_null(max_number, percentage):
+def get_random_num_given_per_null(max_number, percentage):
     """
         add 10% up of the number existing
         if the number is over index, generate null
     """
 
     tenup = int(math.floor(max_number * (1 + percentage)))
-    random_location = random.randint(0, tenup)
+    random_num = random.randint(0, tenup)
 
-    if random_location > max_number:
+    if random_num > max_number:
         return None
     else:
-        return random_location
+        return random_num
+
+
+def get_gauss_num_10per_null():
+    """
+        get a number within normal distribution with 10percent null
+    """
+
+    first_mean = 10
+    sd = 1
+
+    if (get_random_num_given_per_null(1, 0.1) != None):
+        gauss_num = random.normalvariate(first_mean, sd)
+    else:
+        gauss_num = None
+
+    return gauss_num
 
 
 def generate_2nd_10th_column(rows):
@@ -73,9 +89,10 @@ def generate_2nd_10th_column(rows):
         You can choose whatever mean and variance you would like for each column.
     """
 
-    result = [generate_header(2, 10, "")]
+    start_col = 2
+    end_col = 10
 
-    return result
+    return append_data(start_col, end_col, rows, get_gauss_num_10per_null)
 
 
 def get_random_word_10per_null():
@@ -86,7 +103,7 @@ def get_random_word_10per_null():
     # word_dic = open('wordlist.txt', 'w')
     word_dic = file('wordlist.txt').read().split()
     word_dic_length = len(word_dic)
-    random_word_location = get_random_num_10per_null(word_dic_length, 0.1)
+    random_word_location = get_random_num_given_per_null(word_dic_length, 0.1)
     if random_word_location:
         return word_dic[random_word_location]
     else:
@@ -100,13 +117,13 @@ def append_data(start_col, end_col, rows, func_for_content):
 
     result = [generate_header(start_col, end_col, "")]
 
-    while(len(result) < rows + 1):
+    while len(result) < rows + 1:
         item = []
-        while(len(item) < end_col - start_col + 1):
+        while len(item) < end_col - start_col + 1:
             to_append = func_for_content()
             item.append(to_append)
         result.append(item)
-    
+
     return result
 
 
@@ -125,9 +142,13 @@ def generate_11th_19th_column(rows):
 
 
 def get_random_date():
+    """
+        generates random date
+    """
+
     start_date = "01/01/2014"
     date_1 = datetime.datetime.strptime(start_date, "%m/%d/%Y")
-    random_number = get_random_num_10per_null(365, 0)
+    random_number = get_random_num_given_per_null(365, 0)
     return str((date_1 + datetime.timedelta(days=random_number)).strftime("%B %d, %Y"))
 
 
@@ -146,15 +167,15 @@ def run_all():
     run all functions that generates the table
     """
 
-    rows = 2;
+    rows = 2
     result = generate_1st_column(rows)
-    # second_10th = generate_2nd_10th_column(rows)
-    # result = generate_column(second_10th, result)
+    second_10th = generate_2nd_10th_column(rows)
+    result = generate_column(second_10th, result)
     eleventh_19th = generate_11th_19th_column(rows)
     result = generate_column(eleventh_19th, result)
     twentiesth = generate_20th_column(rows)
     result = generate_column(twentiesth, result)
-    
+
 
     return result
 
@@ -167,7 +188,8 @@ def generate_csv_table(table_values):
     """generate csv table with given array"""
 
     with open('ayasdi_assignment.csv', 'wb') as csvfile:
-        filewriter = csv.writer(csvfile, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        filewriter = csv.writer(csvfile, delimiter='\t')
+        # , quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         # write the rest of the column values
         for i in range(0, len(table_values)):
