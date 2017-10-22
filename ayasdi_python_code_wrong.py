@@ -6,8 +6,6 @@ import csv
 import sqlite3
 from sqlite3 import Error
 
-ROWS = 200
-
 def generate_header(start, end, attachment):
     """
         header generator
@@ -24,16 +22,22 @@ def generate_header(start, end, attachment):
 def generate_column(values, previous_table):
     """Generate a column with given values"""
 
-    # result = []
+    result = []
 
     for i in range(0, len(previous_table)):
-        # current_item = previous_table[i] + values[i]
-        # result.append(current_item)
-        values[i][0:0] = previous_table[i]
+        current_item = previous_table[i] + values[i]
+        # due to speed, the below concatination method is used
+        # https://stackoverflow.com/questions/12088089/python-list-concatenation-efficiency
+        # values[i][0:0] = previous_table[i]
 
-    # return result
-    print "Column(s) attached to result"
-    return values
+        # result.append(current_item)
+        result.append(values)
+
+        # progress indicator
+        if i % 10000 == 0:
+            print str(i) + " attached to result"
+
+    return result
 
 
 # Generating CSV file
@@ -90,7 +94,7 @@ def generate_2nd_10th_column(rows):
     """
         The next 9 columns (2 to 10) contain randomly distributed gaussian data
         and are labelled col2_x ... col10_x where 'x' is the mean of the gaussian distribution.
-        For example, if you chose means of 10, 20, 30, 40, 50, 60, 70, 80, 90 for col2 through col10,
+        For example, if you chose means of 10, 20, 30, 40, 50, 60, 70, 80 for col2 through col10,
         the labels are col2_10, col3_20, col4_30 and etc.
         You can choose whatever mean and variance you would like for each column.
     """
@@ -100,11 +104,10 @@ def generate_2nd_10th_column(rows):
     range_for_col = end_col - start_col
     result = []
 
-    for i in range(0, range_for_col + 1):
-        column_index = i + 2
-        input_mean = (i + 1) * 10
+    for i in range(1, range_for_col + 1):
+        input_mean = i * 10
         std = 1
-        column_to_attach = [["col" + str(column_index) + "_" + str(input_mean)]]
+        column_to_attach = [["col" + str(i) + "_" + str(input_mean)]]
 
         # paste a column to the previous column
         while len(column_to_attach) < rows + 1:
@@ -115,14 +118,13 @@ def generate_2nd_10th_column(rows):
 
             # progress indicator
             if len(column_to_attach) % 10000 == 0:
-                print "column" + str(i) + "," + str(len(column_to_attach)) + " processed"
+                print str(len(column_to_attach)) + " processed for column 2 - 10"
 
         if result:
             result = generate_column(column_to_attach, result)
         else:
             result = column_to_attach
 
-    print result[0]
     return result
 
 
@@ -131,12 +133,8 @@ def get_random_word_10per_null():
         returns word with 10% possiblity of returning null
     """
 
-    print "importing wordlist"
-    from wordlist import wordlist
-
     # word_dic = open('wordlist.txt', 'w')
-    # word_dic = file('wordlist.txt').read().split()
-    word_dic = wordlist
+    word_dic = file('wordlist.txt').read().split()
     word_dic_length = len(word_dic) - 1
     random_word_location = get_random_num_given_per_null(word_dic_length, 0.1)
 
@@ -178,6 +176,7 @@ def generate_11th_19th_column(rows):
 
     start_col = 11
     end_col = 19
+
     return append_data(start_col, end_col, rows, get_random_word_10per_null)
 
 
@@ -202,26 +201,27 @@ def generate_20th_column(rows):
     return append_data(20, 20, rows, get_random_date)
 
 
-def run_all(rows):
+def run_all():
     """
     run all functions that generates the table
     """
 
-    print "start row1"
+    rows = 100
+    print "start processing 1st column"
     result = generate_1st_column(rows)
-    print "start row 2 - 10"
-    second_10th = generate_2nd_10th_column(rows)
-    print "add row 2 - 10"
-    result = generate_column(second_10th, result)
-    print "start row 11 - 19"    
-    eleventh_19th = generate_11th_19th_column(rows)
-    print "add row 11 - 19"
-    result = generate_column(eleventh_19th, result)
-    print "start row 20"
-    twentiesth = generate_20th_column(rows)
-    print "add row 20"
-    result = generate_column(twentiesth, result)
-    print "adding row 20 completed."
+    print "end processing 1st column. start processing 2nd - 10th"
+    to_attach = generate_2nd_10th_column(rows)
+    print "end processing 2nd - 10th column. adding it to the 1st"
+    result = generate_column(to_attach, result)
+    print "finish adding 2nd - 10th to 1st. start processing 11th - 19th"
+    to_attach = generate_11th_19th_column(rows)
+    print "end processing 11th - 19th column. adding it to the 1 - 18th"
+    result = generate_column(to_attach, result)
+    print "finish adding 11nd - 19th to 1st. start processing 20th"
+    to_attach = generate_20th_column(rows)
+    print "end processing 20th column. adding it to 1st - 19th"
+    result = generate_column(to_attach, result)
+    print "finished generating the table array"
 
     return result
 
@@ -263,7 +263,7 @@ def add_all_lines(conn, table_values):
     """
 
     column_list = table_values[0]
-    column_row = filter(lambda x: x != "'", str(column_list)[1: -1])
+    column_row = ','.join(map(str, column_list))
     qmark = "?"
     col_count = len(column_list)
     for cols in range(1, col_count):
@@ -279,8 +279,8 @@ def add_all_lines(conn, table_values):
         # csv.DictReader uses first line in file for column headings by default
         dr_name = csv.DictReader(fin) # comma is default delimiter
 
-        to_db = [(i['col1'], i['col2_10'], i['col3_20'], i['col4_30'], i['col5_40'], i['col6_50'], \
-        i['col7_60'], i['col8_70'], i['col9_80'], i['col10_90'],i['col11'], i['col12'], i['col13'], i['col14'], \
+        to_db = [(i['col1'], i['col1_10'], i['col2_20'], i['col3_30'], i['col4_40'], i['col5_50'], \
+        i['col6_60'], i['col7_70'], i['col8_80'], i['col11'], i['col12'], i['col13'], i['col14'], \
         i['col15'], i['col16'], i['col17'], i['col18'], i['col19'], i['col20']) for i in dr_name]
 
     cur.executemany("INSERT INTO ayasdi_table (" + column_row + ") VALUES (" + qmark + ");", to_db)
@@ -306,18 +306,19 @@ def main():
         connect with SQLite
     """
 
-    print "generate all columns:"
-    table_values = run_all(ROWS)
+    table_values = run_all()
     generate_csv_table(table_values)
 
     database = "./ayasdi_assignment.db"
     # create a database connection
     conn = create_connection(database)
     with conn:
+        print "run all columns:"
         # select_all_lines(conn)
-        print "adding all lines to db"
+        run_all()
+        print "ran all"
         add_all_lines(conn, table_values)
-        print "commiting all lines"
+        print "add all lines"
         conn.commit()
         print "committed"
 
