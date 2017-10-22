@@ -5,8 +5,20 @@ import datetime
 import csv
 import sqlite3
 from sqlite3 import Error
+from wordlist import wordlist
 
-ROWS = 200
+ROWS = 1000000
+
+def display_indicator(rows, anchor, message):
+    """
+        prints statement evey 10% of the rows to show how much has progressed
+    """
+
+    indicator = rows/10
+
+    if indicator > 1 and anchor % indicator == 0:
+        print message
+
 
 def generate_header(start, end, attachment):
     """
@@ -52,8 +64,7 @@ def generate_1st_column(rows):
         result.append([values[i]])
 
         # progress indicator
-        if i % 10000 == 0:
-            print str(i) + " numbers processed for column 1"
+        display_indicator(ROWS, i, str(i) + " numbers processed for column 1")
 
     return result
 
@@ -71,19 +82,6 @@ def get_random_num_given_per_null(max_number, percentage):
         return None
 
     return random_num
-
-
-def get_gauss_num_10per_null(input_mean, input_std):
-    """
-        get a number within normal distribution with 10percent null
-    """
-
-    if get_random_num_given_per_null(1, 0.1) != None:
-        gauss_num = random.normalvariate(input_mean, input_std)
-    else:
-        gauss_num = None
-
-    return gauss_num
 
 
 def generate_2nd_10th_column(rows):
@@ -109,20 +107,26 @@ def generate_2nd_10th_column(rows):
         # paste a column to the previous column
         while len(column_to_attach) < rows + 1:
             item = []
-            to_append = "{0:.2f}".format(get_gauss_num_10per_null(input_mean, std))
+            random_10per_null = get_random_num_given_per_null(1000, 0.1)
+            if random_10per_null != None:
+                gauss_num = random.normalvariate(input_mean, std)
+                to_append = "{0:.2f}".format(gauss_num)
+            else:
+                to_append = None
             item.append(to_append)
             column_to_attach.append(item)
 
             # progress indicator
-            if len(column_to_attach) % 10000 == 0:
-                print "column" + str(i) + "," + str(len(column_to_attach)) + " processed"
+            display_indicator(ROWS, \
+                len(column_to_attach), \
+                "column " + str(column_index) + ", " + str(len(column_to_attach)) + " processed"\
+            )
 
         if result:
             result = generate_column(column_to_attach, result)
         else:
             result = column_to_attach
 
-    print result[0]
     return result
 
 
@@ -130,9 +134,6 @@ def get_random_word_10per_null():
     """
         returns word with 10% possiblity of returning null
     """
-
-    print "importing wordlist"
-    from wordlist import wordlist
 
     # word_dic = open('wordlist.txt', 'w')
     # word_dic = file('wordlist.txt').read().split()
@@ -161,8 +162,8 @@ def append_data(start_col, end_col, rows, func_for_content):
         result.append(item)
 
         # progress indicator
-        if len(result) % 10000 == 0:
-            print str(len(result)) + " data processed for" + str(func_for_content)
+        display_indicator(ROWS, len(result), \
+        str(len(result)) + " data processed for " + str(func_for_content)[10:-1])
 
     return result
 
@@ -327,3 +328,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
